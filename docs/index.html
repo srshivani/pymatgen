@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Introduction &mdash; pymatgen 2020.4.29 documentation</title>
+  <title>Introduction &mdash; pymatgen 2020.7.3 documentation</title>
   
 
   
@@ -27,7 +27,7 @@
         <script src="_static/underscore.js"></script>
         <script src="_static/doctools.js"></script>
         <script src="_static/language_data.js"></script>
-        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
     
     <script type="text/javascript" src="_static/js/theme.js"></script>
 
@@ -70,7 +70,7 @@
             
             
               <div class="version">
-                2020.4.29
+                2020.7.3
               </div>
             
           
@@ -289,9 +289,14 @@ other research groups.</p></li>
 <div class="section" id="change-log">
 <h2>Change log<a class="headerlink" href="#change-log" title="Permalink to this headline">¶</a></h2>
 <ul class="simple">
-<li><p>Improved SQS caller. (&#64;rwoodsrobinson)</p></li>
-<li><p>VolumetricData speedup (&#64;mturiansk)</p></li>
-<li><p>Misc bug fixes</p></li>
+<li><p>Make Slabs properly serializable in as_dict. Fixes #1892.</p></li>
+<li><p>Fixes for critic2caller (&#64;yuuukuma)</p></li>
+<li><p>Merge pull request #1886 from materialsproject/computron</p></li>
+<li><p>Add cost data for He, H, Ar, Ne, Kr, Tc (&#64;computron)</p></li>
+<li><p>Parse scientific notation in OUTCAR (possibly without spaces in between)</p></li>
+<li><p>Spin support for boltztrap2 (&#64;fraricci)</p></li>
+<li><p>New static method to generate basis functions Lobster (&#64;JaGeo)</p></li>
+<li><p>SLME and spillage analysis</p></li>
 </ul>
 <p><a class="reference internal" href="change_log.html"><span class="doc">Older versions</span></a></p>
 </div>
