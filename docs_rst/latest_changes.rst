@@ -1,13 +1,11 @@
 Change log
 ==========
 
-v2020.7.3
----------
-* Make Slabs properly serializable in as_dict. Fixes #1892.
-* Fixes for critic2caller (@yuuukuma)
-* Merge pull request #1886 from materialsproject/computron
-* Add cost data for He, H, Ar, Ne, Kr, Tc (@computron)
-* Parse scientific notation in OUTCAR (possibly without spaces in between)
-* Spin support for boltztrap2 (@fraricci)
-* New static method to generate basis functions Lobster (@JaGeo)
-* SLME and spillage analysis
+v2021.1.28
+----------
+* Ability to read Lobster wavefunctions (@JaGeo, #2034) 
+* Method to estimate number of bands for VASP calculation (@rwoodsrobinson, #2044)
+* Q-Chem cube file plotting and improvements to output parsring (@samblau, #2032)
+* Improvements to pymatgen import speed (@mkhorton, #2031)
+* Bug fix for k-path generation (@munrojm, #2037)
+* Bug fix for parsing of core potentials from VASP (@utf, #2033)
