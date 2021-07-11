@@ -17,7 +17,7 @@ from monty.collections import AttrDict
 from monty.functools import lazy_property
 from tabulate import tabulate
 
-from pymatgen import yaml
+from pymatgen.core import yaml
 from pymatgen.util.plotting import add_fig_kwargs, get_axarray_fig_plt
 
 
@@ -150,7 +150,7 @@ class ScfCycle(Mapping):
 
     def to_string(self, verbose=0):
         """String representation."""
-        rows = [[it + 1] + list(map(str, (self[k][it] for k in self.keys()))) for it in range(self.num_iterations)]
+        rows = [[it + 1] + list(map(str, (v[it] for k, v in self.items()))) for it in range(self.num_iterations)]
 
         return tabulate(rows, headers=["Iter"] + list(self.keys()))
 
@@ -554,7 +554,7 @@ class YamlTokenizer(Iterator):
         self.filename = filename
 
         try:
-            self.stream = open(filename, "rt")
+            self.stream = open(filename, "rt")  # pylint: disable=R1732
         except IOError as exc:
             # Look for associated error file.
             root, ext = os.path.splitext(self.filename)
