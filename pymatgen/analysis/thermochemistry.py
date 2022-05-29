@@ -1,7 +1,5 @@
-# coding: utf-8
 # Copyright (c) Pymatgen Development Team.
 # Distributed under the terms of the MIT License.
-
 
 """
 A module to perform experimental thermochemical data analysis.
@@ -97,8 +95,8 @@ class ThermoData:
         Returns: MSONable dict
         """
         return {
-            "@module": self.__class__.__module__,
-            "@class": self.__class__.__name__,
+            "@module": type(self).__module__,
+            "@class": type(self).__name__,
             "type": self.type,
             "formula": self.formula,
             "compound_name": self.compound_name,
@@ -122,7 +120,7 @@ class ThermoData:
             "ref",
             "uncertainty",
         ]
-        output = ["{} : {}".format(k, getattr(self, k)) for k in props]
+        output = [f"{k} : {getattr(self, k)}" for k in props]
         return "\n".join(output)
 
     def __str__(self):
