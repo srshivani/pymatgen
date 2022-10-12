@@ -97,7 +97,6 @@ class QCInput(InputFile):
             geom_opt (dict):
                     A dictionary of input parameters for the geom_opt section of the QChem input file.
                     This section is required when using the new libopt3 geometry optimizer.
-
         """
         self.molecule = molecule
         self.rem = lower_and_check_unique(rem)
@@ -150,7 +149,7 @@ class QCInput(InputFile):
         """
         Return a string representation of an entire input file.
         """
-        return self.__str__()
+        return str(self)
 
     def __str__(self):
         combined_list = []
@@ -209,9 +208,9 @@ class QCInput(InputFile):
         multi_job_string = ""
         for i, job_i in enumerate(job_list):
             if i < len(job_list) - 1:
-                multi_job_string += job_i.__str__() + "\n@@@\n\n"
+                multi_job_string += str(job_i) + "\n@@@\n\n"
             else:
-                multi_job_string += job_i.__str__()
+                multi_job_string += str(job_i)
         return multi_job_string
 
     @classmethod
@@ -334,11 +333,7 @@ class QCInput(InputFile):
         else:
             mol_list.append(f" {int(molecule.charge)} {molecule.spin_multiplicity}")
             for site in molecule.sites:
-                mol_list.append(
-                    " {atom}     {x: .10f}     {y: .10f}     {z: .10f}".format(
-                        atom=site.species_string, x=site.x, y=site.y, z=site.z
-                    )
-                )
+                mol_list.append(f" {site.species_string}     {site.x: .10f}     {site.y: .10f}     {site.z: .10f}")
         mol_list.append("$end")
         return "\n".join(mol_list)
 
@@ -558,7 +553,7 @@ class QCInput(InputFile):
         # remove end from sections
         sections = [sec for sec in sections if sec != "end"]
         # this error should be replaced by a multi job read function when it is added
-        if "multiple_jobs" in matches.keys():
+        if "multiple_jobs" in matches:
             raise ValueError("Output file contains multiple qchem jobs please parse separately")
         if "molecule" not in sections:
             raise ValueError("Output file does not contain a molecule section")
@@ -585,11 +580,11 @@ class QCInput(InputFile):
             "spin_mult": r"^\s*\$molecule\n\s(?:\-)*\d+\s*(\d)",
         }
         matches = read_pattern(string, patterns)
-        if "read" in matches.keys():
+        if "read" in matches:
             return "read"
-        if "charge" in matches.keys():
+        if "charge" in matches:
             charge = float(matches["charge"][0][0])
-        if "spin_mult" in matches.keys():
+        if "spin_mult" in matches:
             spin_mult = int(matches["spin_mult"][0][0])
         header = r"^\s*\$molecule\n\s*(?:\-)*\d+\s*\d"
         row = r"\s*((?i)[a-z]+)\s+([\d\-\.]+)\s+([\d\-\.]+)\s+([\d\-\.]+)"
@@ -638,7 +633,7 @@ class QCInput(InputFile):
             "CONNECT": r"^\s*CONNECT",
         }
         opt_matches = read_pattern(string, patterns)
-        opt_sections = list(opt_matches.keys())
+        opt_sections = list(opt_matches)
         opt = {}
         if "CONSTRAINT" in opt_sections:
             c_header = r"^\s*CONSTRAINT\n"

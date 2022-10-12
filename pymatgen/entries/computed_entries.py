@@ -16,7 +16,7 @@ import json
 import os
 import warnings
 from itertools import combinations
-from typing import Literal
+from typing import Literal, cast
 
 import numpy as np
 from monty.json import MontyDecoder, MontyEncoder, MSONable
@@ -62,7 +62,7 @@ class EnergyAdjustment(MSONable):
             description: str, human-readable explanation of the energy adjustment.
         """
         self.name = name
-        self.cls = cls if cls else {}
+        self.cls = cls or {}
         self.description = description
         self._value = value
         self._uncertainty = uncertainty
@@ -94,7 +94,7 @@ class EnergyAdjustment(MSONable):
     @abc.abstractmethod
     def explain(self):
         """
-        Return an explanaion of how the energy adjustment is calculated.
+        Return an explanation of how the energy adjustment is calculated.
         """
 
     def __repr__(self):
@@ -126,7 +126,7 @@ class ConstantEnergyAdjustment(EnergyAdjustment):
         """
         Args:
             value: float, value of the energy adjustment in eV
-            uncertainty: float, uncertaint of the energy adjustment in eV. (Default: np.nan)
+            uncertainty: float, uncertainty of the energy adjustment in eV. (Default: np.nan)
             name: str, human-readable name of the energy adjustment.
                 (Default: Constant energy adjustment)
             cls: dict, Serialized Compatibility class used to generate the energy
@@ -140,7 +140,7 @@ class ConstantEnergyAdjustment(EnergyAdjustment):
     @property
     def explain(self):
         """
-        Return an explanaion of how the energy adjustment is calculated.
+        Return an explanation of how the energy adjustment is calculated.
         """
         return self.description + f" ({self.value:.3f} eV)"
 
@@ -199,7 +199,7 @@ class CompositionEnergyAdjustment(EnergyAdjustment):
         self._adj_per_atom = adj_per_atom
         self.uncertainty_per_atom = uncertainty_per_atom
         self.n_atoms = n_atoms
-        self.cls = cls if cls else {}
+        self.cls = cls or {}
         self.name = name
         self.description = description
 
@@ -220,7 +220,7 @@ class CompositionEnergyAdjustment(EnergyAdjustment):
     @property
     def explain(self):
         """
-        Return an explanaion of how the energy adjustment is calculated.
+        Return an explanation of how the energy adjustment is calculated.
         """
         return self.description + f" ({self._adj_per_atom:.3f} eV/atom x {self.n_atoms} atoms)"
 
@@ -267,7 +267,7 @@ class TemperatureEnergyAdjustment(EnergyAdjustment):
         self.temp = temp
         self.n_atoms = n_atoms
         self.name = name
-        self.cls = cls if cls else {}
+        self.cls = cls or {}
         self.description = description
 
     @property
@@ -287,11 +287,9 @@ class TemperatureEnergyAdjustment(EnergyAdjustment):
     @property
     def explain(self):
         """
-        Return an explanaion of how the energy adjustment is calculated.
+        Return an explanation of how the energy adjustment is calculated.
         """
-        return self.description + " ({:.4f} eV/K/atom x {} K x {} atoms)".format(
-            self._adj_per_deg, self.temp, self.n_atoms
-        )
+        return self.description + f" ({self._adj_per_deg:.4f} eV/K/atom x {self.temp} K x {self.n_atoms} atoms)"
 
     def normalize(self, factor):
         """
@@ -341,20 +339,20 @@ class ComputedEntry(Entry):
             entry_id: An optional id to uniquely identify the entry.
         """
         super().__init__(composition, energy)
-        self.energy_adjustments = energy_adjustments if energy_adjustments else []
+        self.energy_adjustments = energy_adjustments or []
 
         if correction != 0.0:
             if energy_adjustments:
                 raise ValueError(
-                    "Argument conflict! Setting correction = {:.3f} conflicts "
+                    f"Argument conflict! Setting correction = {correction:.3f} conflicts "
                     "with setting energy_adjustments. Specify one or the "
-                    "other.".format(correction)
+                    "other."
                 )
 
             self.correction = correction
 
-        self.parameters = parameters if parameters else {}
-        self.data = data if data else {}
+        self.parameters = parameters or {}
+        self.data = data or {}
         self.entry_id = entry_id
         self.name = self.composition.reduced_formula
 
@@ -461,15 +459,9 @@ class ComputedEntry(Entry):
     def __repr__(self) -> str:
         n_atoms = self.composition.num_atoms
         output = [
-            "{} {:<10} - {:<12} ({})".format(
-                self.entry_id,
-                type(self).__name__,
-                self.composition.formula,
-                self.composition.reduced_formula,
-            ),
-            "{:<24} = {:<9.4f} eV ({:<8.4f} eV/atom)".format(
-                "Energy (Uncorrected)", self._energy, self._energy / n_atoms
-            ),
+            f"{self.entry_id} {type(self).__name__:<10} "
+            f"- {self.composition.formula:<12} ({self.composition.reduced_formula})",
+            f"{'Energy (Uncorrected)':<24} = {self._energy:<9.4f} eV ({self._energy / n_atoms:<8.4f} eV/atom)",
             f"{'Correction':<24} = {self.correction:<9.4f} eV ({self.correction / n_atoms:<8.4f} eV/atom)",
             f"{'Energy (Final)':<24} = {self.energy:<9.4f} eV ({self.energy_per_atom:<8.4f} eV/atom)",
             "Energy Adjustments:",
@@ -490,11 +482,17 @@ class ComputedEntry(Entry):
     def __str__(self):
         return self.__repr__()
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         # NOTE: Scaled duplicates i.e. physically equivalent materials
         # are not equal unless normalized separately.
         if self is other:
             return True
+
+        needed_attrs = ("composition", "energy", "entry_id")
+        if not all(hasattr(other, attr) for attr in needed_attrs):
+            return NotImplemented
+
+        other = cast(ComputedEntry, other)
 
         # Equality is defined based on composition and energy
         # If structures are involved, it is assumed that a {composition, energy} is
@@ -744,7 +742,7 @@ class GibbsComputedStructureEntry(ComputedStructureEntry):
         integer_formula, _ = structure.composition.get_integer_formula_and_factor()
 
         self.experimental = False
-        if integer_formula in G_GASES.keys():
+        if integer_formula in G_GASES:
             self.experimental = True
             if "Experimental" not in str(entry_id):
                 entry_id = f"{entry_id} (Experimental)"
@@ -806,7 +804,7 @@ class GibbsComputedStructureEntry(ComputedStructureEntry):
             data = G_GASES[integer_formula]
 
             if self.interpolated:
-                g_interp = interp1d([int(t) for t in data.keys()], list(data.values()))
+                g_interp = interp1d([int(t) for t in data], list(data.values()))
                 energy = g_interp(self.temp)
             else:
                 energy = data[str(self.temp)]
@@ -839,7 +837,7 @@ class GibbsComputedStructureEntry(ComputedStructureEntry):
             sum_g_i = 0
             for elem, amt in elems.items():
                 g_interp = interp1d(
-                    [float(t) for t in G_ELEMS.keys()],
+                    [float(t) for t in G_ELEMS],
                     [g_dict[elem] for g_dict in G_ELEMS.values()],
                 )
                 sum_g_i += amt * g_interp(self.temp)
