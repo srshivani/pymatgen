@@ -9,7 +9,7 @@ from pymatgen.io.shengbte import Control
 from pymatgen.util.testing import TEST_FILES_DIR, PymatgenTest
 
 f90nml = pytest.importorskip("f90nml")
-TEST_DIR = f"{TEST_FILES_DIR}/shengbte"
+TEST_DIR = f"{TEST_FILES_DIR}/io/shengbte"
 
 module_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -44,7 +44,7 @@ class TestShengBTE(PymatgenTest):
         io = Control.from_file(self.filename)
         assert io["nelements"] == 1
         assert io["natoms"] == 2
-        assert_array_equal(io["ngrid"], [25, 25, 25])
+        assert tuple(io["ngrid"]) == (25, 25, 25)
         assert io["norientations"] == 0
         assert io["lfactor"] == 0.1
         assert io["lattvec"][0] == [0.0, 2.734363999, 2.734363999]
@@ -59,7 +59,7 @@ class TestShengBTE(PymatgenTest):
             all_ints = all(isinstance(item, int) for item in io["types"])
             assert all_ints
         assert_array_equal(io["positions"], [[0.0, 0.0, 0.0], [0.25, 0.25, 0.25]])
-        assert_array_equal(io["scell"], [5, 5, 5])
+        assert tuple(io["scell"]) == (5, 5, 5)
         assert io["t"] == 500
         assert io["scalebroad"] == 0.5
         assert not io["isotopes"]
@@ -84,7 +84,7 @@ class TestShengBTE(PymatgenTest):
             reference_string = reference_file.read()
         assert test_string == reference_string
 
-    def test_msonable_implementation(self):
+    def test_as_from_dict(self):
         # tests as dict and from dict methods
         ctrl_from_file = Control.from_file(self.filename)
         control_from_dict = Control.from_dict(ctrl_from_file.as_dict())

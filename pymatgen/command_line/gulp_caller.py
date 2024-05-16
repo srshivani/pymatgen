@@ -1,5 +1,5 @@
 """Interface with command line GULP.
-http://projects.ivec.org
+https://gulp.curtin.edu.au/index.html
 WARNING: you need to have GULP installed on your system.
 """
 
@@ -22,6 +22,8 @@ __maintainer__ = "Bharat Medasani"
 __email__ = "bkmedasani@lbl.gov,wenhao@mit.edu"
 __status__ = "Production"
 __date__ = "Jun 22, 2013M"
+
+module_dir = os.path.dirname(os.path.abspath(__file__))
 
 _anions = set(map(Element, ["O", "S", "F", "Cl", "Br", "N", "P"]))
 _cations = set(
@@ -174,7 +176,7 @@ _gulp_kw = {
     "spatial",
     "storevectors",
     "nomolecularinternalke",
-    "voight",
+    "voigt",
     "zsisa",
     # Optimization method
     "conjugate",
@@ -235,7 +237,7 @@ class GulpIO:
 
     @staticmethod
     def keyword_line(*args):
-        """Checks if the input args are proper gulp keywords and
+        """Check if the input args are proper gulp keywords and
         generates the 1st line of gulp input. Full keywords are expected.
 
         Args:
@@ -256,7 +258,7 @@ class GulpIO:
         cation_shell_flg: bool = False,
         symm_flg: bool = True,
     ):
-        """Generates GULP input string corresponding to pymatgen structure.
+        """Generate GULP input string corresponding to pymatgen structure.
 
         Args:
             structure: pymatgen Structure object
@@ -276,7 +278,7 @@ class GulpIO:
                 written.
 
         Returns:
-            string containing structure for GULP input
+            str: containing structure for GULP input
         """
         gin = ""
         if cell_flg:
@@ -285,7 +287,7 @@ class GulpIO:
             alpha, beta, gamma = lattice.angles
             a, b, c = lattice.lengths
             lat_str = f"{a:6f} {b:6f} {c:6f} {alpha:6f} {beta:6f} {gamma:6f}"
-            gin += lat_str + "\n"
+            gin += f"{lat_str}\n"
 
         if frac_flg:
             gin += "frac\n"
@@ -296,10 +298,10 @@ class GulpIO:
         for site in structure:
             coord = [str(i) for i in getattr(site, coords_key)]
             specie = site.specie
-            core_site_desc = specie.symbol + " core " + " ".join(coord) + "\n"
+            core_site_desc = f"{specie.symbol} core {' '.join(coord)}\n"
             gin += core_site_desc
             if (specie in _anions and anion_shell_flg) or (specie in _cations and cation_shell_flg):
-                shel_site_desc = specie.symbol + " shel " + " ".join(coord) + "\n"
+                shel_site_desc = f"{specie.symbol} shel {' '.join(coord)}\n"
                 gin += shel_site_desc
             else:
                 pass
@@ -311,11 +313,10 @@ class GulpIO:
 
     @staticmethod
     def specie_potential_lines(structure, potential, **kwargs):
-        """Generates GULP input specie and potential string for pymatgen
-        structure.
+        """Generate GULP input species and potential string for pymatgen structure.
 
         Args:
-            structure: pymatgen.core.structure.Structure object
+            structure: pymatgen Structure object
             potential: String specifying the type of potential used
             kwargs: Additional parameters related to potential. For
                 potential == "buckingham",
@@ -329,14 +330,13 @@ class GulpIO:
                 cation_shell_chrg=float
 
         Returns:
-            string containing specie and potential specification for gulp
-            input.
+            str: containing species and potential for GULP input
         """
-        raise NotImplementedError("gulp_specie_potential not yet implemented.\nUse library_line instead")
+        raise NotImplementedError("gulp_specie_potential not yet implemented. Use library_line instead")
 
     @staticmethod
     def library_line(file_name):
-        """Specifies GULP library file to read species and potential parameters.
+        """Specify GULP library file to read species and potential parameters.
         If using library don't specify species and potential
         in the input file and vice versa. Make sure the elements of
         structure are in the library file.
@@ -347,33 +347,33 @@ class GulpIO:
         Returns:
             GULP input string specifying library option
         """
-        gulplib_set = "GULP_LIB" in os.environ
+        gulp_lib_set = "GULP_LIB" in os.environ
 
-        def readable(f):
-            return os.path.isfile(f) and os.access(f, os.R_OK)
+        def readable(file):
+            return os.path.isfile(file) and os.access(file, os.R_OK)
 
         gin = ""
-        dirpath, fname = os.path.split(file_name)
+        dirpath, _fname = os.path.split(file_name)
         if dirpath and readable(file_name):  # Full path specified
-            gin = "library " + file_name
+            gin = f"library {file_name}"
         else:
             fpath = os.path.join(os.getcwd(), file_name)  # Check current dir
             if readable(fpath):
-                gin = "library " + fpath
-            elif gulplib_set:  # Check the GULP_LIB path
+                gin = f"library {fpath}"
+            elif gulp_lib_set:  # Check the GULP_LIB path
                 fpath = os.path.join(os.environ["GULP_LIB"], file_name)
                 if readable(fpath):
-                    gin = "library " + file_name
+                    gin = f"library {file_name}"
         if gin:
             return gin + "\n"
         raise GulpError("GULP library not found")
 
     def buckingham_input(self, structure: Structure, keywords, library=None, uc=True, valence_dict=None):
-        """Gets a GULP input for an oxide structure and buckingham potential
+        """Get a GULP input for an oxide structure and buckingham potential
         from library.
 
         Args:
-            structure: pymatgen.core.structure.Structure
+            structure: pymatgen Structure
             keywords: GULP first line keywords.
             library (Default=None): File containing the species and potential.
             uc (Default=True): Unit Cell Flag.
@@ -399,7 +399,7 @@ class GulpIO:
                J. Mater Chem., 4, 831-837 (1994)
 
         Args:
-            structure: pymatgen.core.structure.Structure
+            structure: pymatgen Structure
             val_dict (Needed if structure is not charge neutral): {El:valence}
                 dict, where El is element.
         """
@@ -457,10 +457,10 @@ class GulpIO:
         return gin
 
     def tersoff_input(self, structure: Structure, periodic=False, uc=True, *keywords):
-        """Gets a GULP input with Tersoff potential for an oxide structure.
+        """Get a GULP input with Tersoff potential for an oxide structure.
 
         Args:
-            structure: pymatgen.core.structure.Structure
+            structure: pymatgen Structure
             periodic (Default=False): Flag denoting whether periodic
                 boundary conditions are used
             library (Default=None): File containing the species and potential.
@@ -485,7 +485,7 @@ class GulpIO:
         """Generate the species, Tersoff potential lines for an oxide structure.
 
         Args:
-            structure: pymatgen.core.structure.Structure
+            structure: pymatgen Structure
         """
         bv = BVAnalyzer()
         el = [site.specie.symbol for site in structure]
@@ -524,7 +524,9 @@ class GulpIO:
         """
         energy = None
         for line in gout.split("\n"):
-            if "Total lattice energy" in line and "eV" in line or "Non-primitive unit cell" in line and "eV" in line:
+            if ("Total lattice energy" in line and "eV" in line) or (
+                "Non-primitive unit cell" in line and "eV" in line
+            ):
                 energy = line.split()
         if energy:
             return float(energy[4])
@@ -537,66 +539,67 @@ class GulpIO:
             gout (str): GULP output string.
 
         Returns:
-            (Structure) relaxed structure.
+            Structure: relaxed structure.
         """
         # Find the structure lines
         structure_lines = []
         cell_param_lines = []
         output_lines = gout.split("\n")
-        no_lines = len(output_lines)
-        i = 0
+        n_lines = len(output_lines)
+        idx = 0
+        a = b = c = alpha = beta = gamma = 0.0
         # Compute the input lattice parameters
-        while i < no_lines:
-            line = output_lines[i]
+        while idx < n_lines:
+            line = output_lines[idx]
             if "Full cell parameters" in line:
-                i += 2
-                line = output_lines[i]
+                idx += 2
+                line = output_lines[idx]
                 a = float(line.split()[8])
                 alpha = float(line.split()[11])
-                line = output_lines[i + 1]
+                line = output_lines[idx + 1]
                 b = float(line.split()[8])
                 beta = float(line.split()[11])
-                line = output_lines[i + 2]
+                line = output_lines[idx + 2]
                 c = float(line.split()[8])
                 gamma = float(line.split()[11])
-                i += 3
+                idx += 3
                 break
             if "Cell parameters" in line:
-                i += 2
-                line = output_lines[i]
+                idx += 2
+                line = output_lines[idx]
                 a = float(line.split()[2])
                 alpha = float(line.split()[5])
-                line = output_lines[i + 1]
+                line = output_lines[idx + 1]
                 b = float(line.split()[2])
                 beta = float(line.split()[5])
-                line = output_lines[i + 2]
+                line = output_lines[idx + 2]
                 c = float(line.split()[2])
                 gamma = float(line.split()[5])
-                i += 3
+                idx += 3
                 break
-            i += 1
+            idx += 1
 
-        while i < no_lines:
-            line = output_lines[i]
+        while idx < n_lines:
+            line = output_lines[idx]
             if "Final fractional coordinates of atoms" in line:
                 # read the site coordinates in the following lines
-                i += 6
-                line = output_lines[i]
-                while line[0:2] != "--":
+                idx += 6
+                line = output_lines[idx]
+                while line[:2] != "--":
                     structure_lines.append(line)
-                    i += 1
-                    line = output_lines[i]
+                    idx += 1
+                    line = output_lines[idx]
                     # read the cell parameters
-                i += 9
-                line = output_lines[i]
+                idx += 9
+                line = output_lines[idx]
                 if "Final cell parameters" in line:
-                    i += 3
+                    idx += 3
                     for del_i in range(6):
-                        line = output_lines[i + del_i]
+                        line = output_lines[idx + del_i]
                         cell_param_lines.append(line)
 
                 break
-            i += 1
+            idx += 1
 
         # Process the structure lines
         if structure_lines:
@@ -617,13 +620,17 @@ class GulpIO:
             alpha = float(cell_param_lines[3].split()[1])
             beta = float(cell_param_lines[4].split()[1])
             gamma = float(cell_param_lines[5].split()[1])
-        latt = Lattice.from_parameters(a, b, c, alpha, beta, gamma)
+        if not all([a, b, c, alpha, beta, gamma]):
+            raise ValueError(
+                f"Missing lattice parameters in Gulp output: {a=}, {b=}, {c=}, {alpha=}, {beta=}, {gamma=}"
+            )
+        lattice = Lattice.from_parameters(a, b, c, alpha, beta, gamma)
 
-        return Structure(latt, sp, coords)
+        return Structure(lattice, sp, coords)
 
 
 class GulpCaller:
-    """Class to run gulp from command line."""
+    """Run gulp from command line."""
 
     def __init__(self, cmd="gulp"):
         """Initialize with the executable if not in the standard path.
@@ -635,7 +642,7 @@ class GulpCaller:
         def is_exe(f) -> bool:
             return os.path.isfile(f) and os.access(f, os.X_OK)
 
-        fpath, fname = os.path.split(cmd)
+        fpath, _fname = os.path.split(cmd)
         if fpath:
             if is_exe(cmd):
                 self._gulp_cmd = cmd
@@ -647,7 +654,7 @@ class GulpCaller:
                 if is_exe(file):
                     self._gulp_cmd = file
                     return
-        raise GulpError("Executable not found")
+        raise GulpError("Executable not found, please download from https://gulp.curtin.edu.au/index.html.")
 
     def run(self, gin):
         """Run GULP using the gin as input.
@@ -664,8 +671,8 @@ class GulpCaller:
                 stdout=subprocess.PIPE,
                 stdin=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-            ) as p:
-                out, err = p.communicate(bytearray(gin, "utf-8"))
+            ) as p_open:
+                out, err = p_open.communicate(bytearray(gin, "utf-8"))
             out = out.decode("utf-8")
             err = err.decode("utf-8")
 
@@ -688,17 +695,17 @@ class GulpCaller:
             if conv_err_string in out:
                 raise GulpConvergenceError(out)
 
-            gout = ""
+            g_out = ""
             for line in out.split("\n"):
-                gout = gout + line + "\n"
-            return gout
+                g_out += f"{line}\n"
+            return g_out
 
 
 def get_energy_tersoff(structure, gulp_cmd="gulp"):
     """Compute the energy of a structure using Tersoff potential.
 
     Args:
-        structure: pymatgen.core.structure.Structure
+        structure: pymatgen Structure
         gulp_cmd: GULP command if not in standard place
     """
     gio = GulpIO()
@@ -712,7 +719,7 @@ def get_energy_buckingham(structure, gulp_cmd="gulp", keywords=("optimise", "con
     """Compute the energy of a structure using Buckingham potential.
 
     Args:
-        structure: pymatgen.core.structure.Structure
+        structure: pymatgen Structure
         gulp_cmd: GULP command if not in standard place
         keywords: GULP first line keywords
         valence_dict: {El: valence}. Needed if the structure is not charge
@@ -729,7 +736,7 @@ def get_energy_relax_structure_buckingham(structure, gulp_cmd="gulp", keywords=(
     """Relax a structure and compute the energy using Buckingham potential.
 
     Args:
-        structure: pymatgen.core.structure.Structure
+        structure: pymatgen Structure
         gulp_cmd: GULP command if not in standard place
         keywords: GULP first line keywords
         valence_dict: {El: valence}. Needed if the structure is not charge
@@ -794,11 +801,11 @@ class BuckinghamPotential:
         """
         assert bush_lewis_flag in {"bush", "lewis"}
         pot_file = "bush.lib" if bush_lewis_flag == "bush" else "lewis.lib"
-        with open(os.path.join(os.environ["GULP_LIB"], pot_file)) as f:
+        with open(os.path.join(os.environ["GULP_LIB"], pot_file)) as file:
             # In lewis.lib there is no shell for cation
             species_dict, pot_dict, spring_dict = {}, {}, {}
             sp_flg, pot_flg, spring_flg = False, False, False
-            for row in f:
+            for row in file:
                 if row[0] == "#":
                     continue
                 if row.split()[0] == "species":
@@ -827,7 +834,7 @@ class BuckinghamPotential:
                         else:
                             metal = elmnt.split("_")[0]
                             # oxi_state = metaloxi.split('_')[1][0]
-                            species_dict[elmnt] = metal + " core " + row.split()[2] + "\n"
+                            species_dict[elmnt] = f"{metal} core {row.split()[2]}\n"
                     continue
 
                 if pot_flg:
@@ -861,10 +868,9 @@ class TersoffPotential:
 
     def __init__(self):
         """Init TersoffPotential."""
-        module_dir = os.path.dirname(os.path.abspath(__file__))
-        with open(f"{module_dir}/OxideTersoffPotentials") as f:
+        with open(f"{module_dir}/OxideTersoffPotentials") as file:
             data = {}
-            for row in f:
+            for row in file:
                 metaloxi = row.split()[0]
                 line = row.split(")")
                 data[metaloxi] = line[1]
