@@ -2,7 +2,7 @@
 """
 This script regenerates the enum values in pymatgen.core.libxc_func.py.
 It requires in input the path of the `libxc_docs.txt` file contained in libxc/src
-The script parses this file, creates a new json file inside pymatgen.core
+The script parses this file, creates a new JSON file inside pymatgen.core
 and update the enum values declared in LibxcFunc.
 The script must be executed inside pymatgen/dev_scripts.
 """
@@ -10,16 +10,14 @@ The script must be executed inside pymatgen/dev_scripts.
 from __future__ import annotations
 
 import json
-import os
 import sys
 from copy import deepcopy
 
+from pymatgen.core import PKG_DIR
+
 
 def parse_libxc_docs(path):
-    """
-    Parse libxc_docs.txt file, return dictionary with mapping:
-    libxc_id --> info_dict.
-    """
+    """Parse libxc_docs.txt file, return dictionary {libxc_id: info_dict}."""
 
     def parse_section(section):
         dct = {}
@@ -30,23 +28,25 @@ def parse_libxc_docs(path):
         return int(dct["Number"]), dct
 
     dct = {}
-    with open(path) as file:
+    with open(path, encoding="utf-8") as file:
         section = []
         for line in file:
             if not line.startswith("-"):
                 section += [line]
             else:
                 num, entry = parse_section(section)
-                assert num not in dct
+                if num in dct:
+                    raise RuntimeError(f"{num=} should not be present in {dct=}.")
                 dct[num] = entry
                 section = []
-        assert section == []
+        if section:
+            raise RuntimeError(f"Expected empty section, got {section=}")
 
     return dct
 
 
 def write_libxc_docs_json(xc_funcs, json_path):
-    """Write json file with libxc metadata to path jpath."""
+    """Write JSON file with libxc metadata to path jpath."""
     xc_funcs = deepcopy(xc_funcs)
 
     # Remove XC_FAMILY from Family and XC_ from Kind to make strings more human-readable.
@@ -63,7 +63,7 @@ def write_libxc_docs_json(xc_funcs, json_path):
             if desc is not None:
                 xc_funcs[num][opt] = desc
 
-    with open(json_path, "w") as fh:
+    with open(json_path, "w", encoding="utf-8") as fh:
         json.dump(xc_funcs, fh)
 
     return xc_funcs
@@ -85,9 +85,8 @@ def main():
 
     xc_funcs = parse_libxc_docs(path)
 
-    # Generate new json file in pycore
-    pmg_core = os.path.abspath("../pymatgen/core/")
-    json_path = f"{pmg_core}/libxc_docs.json"
+    # Generate new JSON file in pycore
+    json_path = f"{PKG_DIR}/core/libxc_docs.json"
     write_libxc_docs_json(xc_funcs, json_path)
 
     # Build new enum list.
@@ -100,8 +99,8 @@ def main():
 
     # Re-generate enumerations.
     # [0] read py module.
-    xc_funcpy_path = f"{pmg_core}/libxcfunc.py"
-    with open(xc_funcpy_path) as file:
+    xc_funcpy_path = f"{PKG_DIR}/core/libxcfunc.py"
+    with open(xc_funcpy_path, encoding="utf-8") as file:
         lines = file.readlines()
 
     # [1] insert new enum values in list

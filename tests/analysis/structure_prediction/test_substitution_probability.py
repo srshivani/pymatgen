@@ -22,14 +22,14 @@ def get_table():
     default lambda table.
     """
     json_path = f"{TEST_DIR}/test_lambda.json"
-    with open(json_path) as file:
+    with open(json_path, encoding="utf-8") as file:
         return json.load(file)
 
 
 class TestSubstitutionProbability(TestCase):
     def test_full_lambda_table(self):
         """Check specific values in the data folder. If the
-        json is updated, these tests will have to be as well.
+        JSON is updated, these tests will have to be as well.
         """
         sp = SubstitutionProbability(alpha=-5.0)
         sp1 = Species("Fe", 4)

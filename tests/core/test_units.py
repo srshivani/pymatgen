@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import warnings
+
 import pytest
 from numpy.testing import assert_array_equal
 from pytest import approx
@@ -64,7 +66,7 @@ class TestFloatWithUnit(PymatgenTest):
         d = Energy(1, "Ha")
         assert a + d == approx(28.311386245987997)
         assert a - d == approx(-26.111386245987994)
-        assert a + 1 == 2.1
+        assert a + 1 == approx(2.1)
         assert str(a / d) == "1.1 eV Ha^-1"
 
         e_kj = Energy(1, "kJ")
@@ -80,7 +82,7 @@ class TestFloatWithUnit(PymatgenTest):
         b = a * 3
         assert float(b) == approx(60)
         assert str(b.unit) == "h"
-        assert float(3 * a) == 60.0
+        assert float(3 * a) == approx(60.0)
         a = Time(0.5, "d")
         assert float(a.to("s")) == approx(3600 * 24 * 0.5)
 
@@ -89,20 +91,34 @@ class TestFloatWithUnit(PymatgenTest):
         assert x.to("cm") == approx(4.2e-08)
         assert x.to("pm") == 420
         assert str(x / 2) == "2.1 ang"
+
         y = x**3
         assert y == approx(74.088)
         assert str(y.unit) == "ang^3"
 
     def test_memory(self):
-        mega = Memory(1, "Mb")
-        assert mega.to("byte") == 1024**2
-        assert mega == Memory(1, "mb")
+        mega_0 = Memory(1, "MB")
+        assert mega_0.to("byte") == 1024**2
 
-        same_mega = Memory.from_str("1Mb")
-        assert same_mega.unit_type == "memory"
+        mega_1 = Memory.from_str("1 MB")
+        assert mega_1.unit_type == "memory"
 
-        other_mega = Memory.from_str("+1.0 mb")
-        assert mega == other_mega
+        mega_2 = Memory.from_str("1MB")
+        assert mega_2.unit_type == "memory"
+
+        mega_3 = Memory.from_str("+1.0 MB")
+        assert mega_0 == mega_1 == mega_2 == mega_3
+
+    def test_deprecated_memory(self):
+        # TODO: remove after 2025-01-01
+        for unit in ("Kb", "kb", "Mb", "mb", "Gb", "gb", "Tb", "tb"):
+            with pytest.warns(DeprecationWarning, match=f"Unit {unit} is deprecated"):
+                Memory(1, unit)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            for unit in ("KB", "MB", "GB", "TB"):
+                Memory(1, unit)
 
     def test_unitized(self):
         @unitized("eV")
@@ -138,8 +154,8 @@ class TestFloatWithUnit(PymatgenTest):
 
         j_out = func5()
         assert j_out.unit == Unit("kg")
-        assert j_out[0] == 0.005
-        assert j_out[1] == 0.01
+        assert j_out[0] == approx(0.005)
+        assert j_out[1] == approx(0.01)
 
     def test_compound_operations(self):
         earth_acc = 9.81 * Length(1, "m") / (Time(1, "s") ** 2)
@@ -169,9 +185,9 @@ class TestFloatWithUnit(PymatgenTest):
         assert FloatWithUnit(-5, "MPa") == -x
 
 
-class TestArrayWithFloatWithUnit(PymatgenTest):
+class TestArrayWithUnit(PymatgenTest):
     def test_energy(self):
-        """Similar to FloatWithUnitTest.test_energy.
+        """Similar to TestFloatWithUnit.test_energy.
         Check whether EnergyArray and FloatWithUnit have same behavior.
 
         # TODO
@@ -191,13 +207,13 @@ class TestArrayWithFloatWithUnit(PymatgenTest):
         e2_in_ha = EnergyArray(1, "Ha")
         assert (e_in_ev + e2_in_ha) == approx(28.311386245987997)
         assert (e_in_ev - e2_in_ha) == approx(-26.111386245987994)
-        assert float(e_in_ev + 1) == 2.1
+        assert float(e_in_ev + 1) == approx(2.1)
 
     def test_time(self):
         """Similar to FloatWithUnitTest.test_time.
         Check whether EnergyArray and FloatWithUnit have same behavior.
         """
-        # here there's a minor difference because we have a ndarray with dtype=int
+        # here there's a minor difference because we have a ndarray with dtype=np.int64
         a = TimeArray(20, "h")
         assert a.to("s") == 3600 * 20
         # Test left and right multiplication.
@@ -245,7 +261,13 @@ class TestArrayWithFloatWithUnit(PymatgenTest):
         ]
 
         for obj in objects_with_unit:
-            assert obj.unit in (Unit("Ha"), Unit("eV"), Unit("s^-1"), Unit("Ha s"), Unit("Ha eV^-1"))
+            assert obj.unit in (
+                Unit("Ha"),
+                Unit("eV"),
+                Unit("s^-1"),
+                Unit("Ha s"),
+                Unit("Ha eV^-1"),
+            )
 
         # Here we could return a FloatWithUnit object but I prefer this
         # a bare scalar since FloatWithUnit extends float while we could
@@ -268,7 +290,7 @@ class TestArrayWithFloatWithUnit(PymatgenTest):
 
     def test_as_base_units(self):
         pressure_arr = ArrayWithUnit([5, 10], "MPa")
-        assert_array_equal(ArrayWithUnit([5000000, 10000000], "Pa"), pressure_arr.as_base_units)
+        assert_array_equal(ArrayWithUnit([5e6, 1e7], "Pa"), pressure_arr.as_base_units)
 
 
 class TestDataPersistence(PymatgenTest):

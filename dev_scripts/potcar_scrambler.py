@@ -48,20 +48,21 @@ class PotcarScrambler:
     def _rand_float_from_str_with_prec(self, input_str: str, bloat: float = 1.5) -> float:
         n_prec = len(input_str.split(".")[1])
         bd = max(1, bloat * abs(float(input_str)))  # ensure we don't get 0
-        return round(bd * np.random.rand(1)[0], n_prec)
+        return round(bd * np.random.default_rng().random(), n_prec)
 
     def _read_fortran_str_and_scramble(self, input_str: str, bloat: float = 1.5):
         input_str = input_str.strip()
+        rng = np.random.default_rng()
 
         if input_str.lower() in {"t", "f", "true", "false"}:
-            return bool(np.random.randint(2))
+            return rng.choice((True, False))
 
         if input_str.upper() == input_str.lower() and input_str[0].isnumeric():
             if "." in input_str:
                 return self._rand_float_from_str_with_prec(input_str, bloat=bloat)
             integer = int(input_str)
             fac = int(np.sign(integer))  # return int of same sign
-            return fac * np.random.randint(abs(max(1, int(np.ceil(bloat * integer)))))
+            return fac * rng.integers(abs(max(1, int(np.ceil(bloat * integer)))))
         try:
             float(input_str)
             return self._rand_float_from_str_with_prec(input_str, bloat=bloat)
@@ -123,7 +124,7 @@ class PotcarScrambler:
         return scrambled_potcar_str
 
     def to_file(self, filename: str) -> None:
-        with zopen(filename, mode="wt") as file:
+        with zopen(filename, mode="wt", encoding="utf-8") as file:
             file.write(self.scrambled_potcars_str)
 
     @classmethod
@@ -163,11 +164,14 @@ def generate_fake_potcar_libraries() -> None:
                 zpath(f"{func_dir}/{psp_name}/POTCAR"),
             ]
             if not any(map(os.path.isfile, paths_to_try)):
-                warnings.warn(f"Could not find {psp_name} in {paths_to_try}")
+                warnings.warn(f"Could not find {psp_name} in {paths_to_try}", stacklevel=2)
             for potcar_path in paths_to_try:
                 if os.path.isfile(potcar_path):
                     os.makedirs(rebase_dir, exist_ok=True)
-                    PotcarScrambler.from_file(input_filename=potcar_path, output_filename=f"{rebase_dir}/POTCAR.gz")
+                    PotcarScrambler.from_file(
+                        input_filename=potcar_path,
+                        output_filename=f"{rebase_dir}/POTCAR.gz",
+                    )
                     break
 
 

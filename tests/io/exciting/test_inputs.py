@@ -1,17 +1,14 @@
 from __future__ import annotations
 
-from xml.etree import ElementTree
+import math
+import re
+from xml.etree import ElementTree as ET
 
 from numpy.testing import assert_allclose
 
 from pymatgen.core import Lattice, Structure
 from pymatgen.io.exciting import ExcitingInput
 from pymatgen.util.testing import TEST_FILES_DIR, PymatgenTest
-
-"""
-Tests the module to parse exciting input
-Created 1st of December, 2016
-"""
 
 __author__ = "Christian Vorwerk"
 __copyright__ = "Copyright 2016"
@@ -74,17 +71,21 @@ class TestExcitingInput(PymatgenTest):
                 [0.5, 0.5, 0.5],
             ],
         )
-        excin = ExcitingInput(structure)
-        for l1, l2 in zip(input_string.split("\n"), excin.write_string("unchanged").split("\n")):
+        exc_in = ExcitingInput(structure)
+        for l1, l2 in zip(
+            input_string.split("\n"),
+            exc_in.write_string("unchanged").split("\n"),
+            strict=True,
+        ):
             if not l1.strip().startswith("<crystal scale"):
                 assert l1.strip() == l2.strip()
 
     def test_writebandstr(self):
         filepath = f"{TEST_FILES_DIR}/cif/CsI3Pb.cif"
         structure = Structure.from_file(filepath)
-        excin = ExcitingInput(structure)
-        string = excin.write_string("primitive", bandstr=True)
-        bandstr = string.split("<properties>")[1].split("</properties>")[0]
+        exc_in = ExcitingInput(structure)
+        string = exc_in.write_string("primitive", bandstr=True)
+        band_str = string.split("<properties>")[1].split("</properties>")[0]
 
         coord = []
         label = []
@@ -124,7 +125,7 @@ class TestExcitingInput(PymatgenTest):
             "S",
             "R",
         ]
-        root = ElementTree.fromstring(bandstr)
+        root = ET.fromstring(band_str)
         for plot1d in root.iter("plot1d"):
             for point in plot1d.iter("point"):
                 coord.append([float(i) for i in point.get("coord").split()])
@@ -132,11 +133,11 @@ class TestExcitingInput(PymatgenTest):
         assert label == label_ref
         assert coord == coord_ref
 
-    def test_paramdict(self):
+    def test_param_dict(self):
         coords = [[0.0, 0.0, 0.0], [0.75, 0.5, 0.75]]
         lattice = Lattice.from_parameters(a=3.84, b=3.84, c=3.84, alpha=120, beta=90, gamma=60)
         struct = Structure(lattice, ["Si", "Si"], coords)
-        paradir = {
+        param_dict = {
             "grst": {
                 "do": "fromscratch",
                 "ngridk": "8 8 8",
@@ -147,23 +148,31 @@ class TestExcitingInput(PymatgenTest):
                 "xstype": "BSE",
                 "ngridk": "4 4 4",
                 "ngridq": "4 4 4",
-                "nempty": "30",
+                "nempty": "30",  # codespell:ignore: nempty
                 "gqmax": "3.0",
                 "broad": "0.07",
                 "tevout": "true",
                 "energywindow": {"intv": "0.0 1.0", "points": "1200"},
-                "screening": {"screentype": "full", "nempty": "100"},
+                "screening": {"screentype": "full", "nempty": "100"},  # codespell:ignore: nempty
                 "BSE": {"bsetype": "singlet", "nstlbse": "1 5 1 4"},
             },
         }
 
         test_input = ExcitingInput(struct)
-        test_string = test_input.write_string("unchanged", **paradir)
+        test_str = test_input.write_string("unchanged", **param_dict)
 
         # read reference file
         filepath = f"{TEST_DIR}/input_exciting2.xml"
-        tree = ElementTree.parse(filepath)
+        tree = ET.parse(filepath)
         root = tree.getroot()
-        ref_string = ElementTree.tostring(root, encoding="unicode")
+        ref_str = ET.tostring(root, encoding="unicode")
 
-        assert ref_string.strip() == test_string.strip()
+        ref_list = ref_str.strip().split()
+        test_list = test_str.strip().split()
+
+        # "scale" is float, direct compare might give surprising results
+        ref_scale = float(re.search(r'scale="([-+]?\d*\.\d+|\d+)"', ref_list.pop(7))[1])
+        test_scale = float(re.search(r'scale="([-+]?\d*\.\d+|\d+)"', test_list.pop(7))[1])
+
+        assert ref_list == test_list
+        assert math.isclose(ref_scale, test_scale)
